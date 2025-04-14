@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWSLearn - By Girish Mukim</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            color: #333;
+            padding: 50px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+        }
+        h1 {
+            color: #ff9900;
+        }
+        p {
+            font-size: 18px;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #ff9900;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 20px;
+        }
+        a:hover {
+            background: #cc7700;
+        }
+        #region {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #555;
+        }
+    </style>
+    <script>
+    function fetchRegion() {
+        // Manually update the region here
+        let region = "us-east-1"; // Change this when deploying in another region
+        document.getElementById("region").innerHTML = "Current AWS Region: <b>" + region + "</b>";
+    }
+    window.onload = fetchRegion;
+	</script>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to AWSLearn!</h1>
+        <p>This channel is dedicated to helping individuals learn AWS cloud technology through hands-on tutorials and real-world use cases.</p>
+        <a href="https://www.youtube.com/@AWSLearn">Subscribe to AWSLearn</a>
+        <p id="region">Fetching AWS Region...</p>
+    </div>
+</body>
+</html>
