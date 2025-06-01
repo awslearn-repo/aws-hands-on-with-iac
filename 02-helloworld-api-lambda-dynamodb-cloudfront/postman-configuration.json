@@ -1,0 +1,55 @@
+{
+  "info": {
+    "name": "HelloWorldAPI",
+    "_postman_id": "abcd1234-5678-9101-1121-314151617181",
+    "description": "Collection to test HelloWorld Lambda-backed API Gateway",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "POST Save Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"id\": \"123\",\n    \"timestamp\": \"2025-04-17T12:00:00Z\",\n    \"message\": \"Hello from Lambda!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/hello",
+          "host": ["{{baseUrl}}"],
+          "path": ["hello"]
+        }
+      }
+    },
+    {
+      "name": "GET Message by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/hello?id=123",
+          "host": ["{{baseUrl}}"],
+          "path": ["hello"],
+          "query": [
+            {
+              "key": "id",
+              "value": "123"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://odn5zlh3gj.execute-api.us-east-1.amazonaws.com/dev"
+    }
+  ]
+}
