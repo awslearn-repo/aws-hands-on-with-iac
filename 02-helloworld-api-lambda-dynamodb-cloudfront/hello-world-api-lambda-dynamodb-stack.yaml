@@ -1,0 +1,158 @@
+# CloudFormation Template: hello-world-api-lambda-dynamodb-stack.yaml
+# Purpose: Demonstrates a simple Lambda-backed API Gateway with DynamoDB integration.
+# This version includes automated API deployment and stage creation.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation stack for HelloWorld API with Lambda, API Gateway, and DynamoDB
+
+Resources:
+
+  HelloWorldTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: HelloWorldTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST  # On-demand billing mode; no need to provision capacity
+
+  HelloWorldFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaDynamoDBPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                Resource: !GetAtt HelloWorldTable.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  HelloWorldFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: HelloWorldFunction
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt HelloWorldFunctionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+
+          dynamodb = boto3.client('dynamodb')
+          table_name = os.environ['TABLE_NAME']
+
+          def handler(event, context):
+              method = event['httpMethod']
+              if method == 'POST':
+                  body = json.loads(event['body'])
+                  dynamodb.put_item(
+                      TableName=table_name,
+                      Item={
+                          'id': {'S': body['id']},
+                          'timestamp': {'S': body['timestamp']},
+                          'message': {'S': body['message']}
+                      }
+                  )
+                  return {'statusCode': 200, 'body': json.dumps('Data saved')}
+              elif method == 'GET':
+                  item_id = event['queryStringParameters']['id']
+                  result = dynamodb.get_item(
+                      TableName=table_name,
+                      Key={'id': {'S': item_id}}
+                  )
+                  return {'statusCode': 200, 'body': json.dumps(result.get('Item', {}))}
+              else:
+                  return {'statusCode': 405, 'body': 'Method Not Allowed'}
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref HelloWorldTable
+
+  HelloWorldApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: HelloWorldApi
+      Description: API Gateway for HelloWorld Lambda
+
+  HelloWorldResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt HelloWorldApi.RootResourceId
+      PathPart: hello
+      RestApiId: !Ref HelloWorldApi
+
+  HelloWorldPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref HelloWorldResource
+      RestApiId: !Ref HelloWorldApi
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - Region: !Ref "AWS::Region"
+            LambdaArn: !GetAtt HelloWorldFunction.Arn
+
+  HelloWorldGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref HelloWorldResource
+      RestApiId: !Ref HelloWorldApi
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - Region: !Ref "AWS::Region"
+            LambdaArn: !GetAtt HelloWorldFunction.Arn
+
+  HelloWorldPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref HelloWorldFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HelloWorldApi}/*/*/*
+
+  HelloWorldDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - HelloWorldPostMethod
+      - HelloWorldGetMethod
+    Properties:
+      RestApiId: !Ref HelloWorldApi
+      StageName: dev
+
+Outputs:
+  ApiEndpoint:
+    Description: URL of the HelloWorld API endpoint
+    Value: !Sub https://${HelloWorldApi}.execute-api.${AWS::Region}.amazonaws.com/dev/hello
+
+  DynamoDBTableName:
+    Description: Name of the DynamoDB table
+    Value: !Ref HelloWorldTable
